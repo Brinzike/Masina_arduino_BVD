@@ -1,0 +1,8 @@
+01. Senzori pentru detectare linie neagra IR
+	- TCRT5000
+	- Rezistenta de 100 Ohm pentru LED IR
+	- Rezistenta de 10 KOhm pentru PULLDOWN Receptor IR
+	
+02. Senzor ultrasune HC-SR04
+
+03. Modul DHT11
