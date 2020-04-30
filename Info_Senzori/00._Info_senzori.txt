@@ -6,3 +6,6 @@
 02. Senzor ultrasune HC-SR04
 
 03. Modul DHT11
+
+04. Receptor Infra Rosu
+	- VS 1838B
