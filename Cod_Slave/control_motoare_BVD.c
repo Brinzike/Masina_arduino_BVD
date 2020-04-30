@@ -3,6 +3,12 @@
 int directie (int directie, int viteza, byte pin[4], boolean DAI[2])
 {
     // Ia valori de la 0 la 255
+    // La mine 0 = HIGH, 1 = LOW
+    if(DAI[0] == 1 && DAI[1] == 0)
+    {
+        viteza = 255 - viteza;
+    }
+    
     switch(directie)
     {
          case 0:
