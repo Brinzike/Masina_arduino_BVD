@@ -5,7 +5,7 @@
 
 #include "control_motoare_BVD.c"
 #include "ceas_BVD.c"
-#include "configurare_butoane_BVD.c"
+//#include "configurare_butoane_BVD.c"
 
 //----------------------------------SETARI PINI------------------------------------------//
 
@@ -18,7 +18,7 @@ const byte PINI_MOTOARE[] = {9,10,5,6};
 
 //----------------------------------DECLARARE VARIABILE-----------------------------------//
 
-// ATENTIE, LA MINE SUNT INVERSATE
+// ATENTIE, la mine sunt inversate
 const boolean DAI[2] = {1,0}; // In loc de HIGH si LOW
 
 // Setari reciver IR
