@@ -1,5 +1,7 @@
 //----------------------------------LIBRARII---------------------------------------------//
 #include <IRremote.h>
+#include <Wire.h>
+#include <EEPROM.h>
 
 //----------------------------------INCLUDE C--------------------------------------------//
 
@@ -39,7 +41,7 @@ boolean tic_tac_secunde = 0;
 
 void setup() 
 { 
-    Serial.begin(9600);    
+    Serial.begin(115200);    
     Serial.println("A pornit sitemul :))");
 
     // --SETUP pini------------------------------//
@@ -55,17 +57,122 @@ void setup()
     irrecv.enableIRIn();
     Serial.println("A pornit reciver-ul IR.");
 
+    comunicare(1);
+    Serial.println("S-a stabilit conexiunea cu partenerul.");
+    
     // --SETUP butoane------------------------------//
-    configurare_butoane();           
+    configurare_butoane();               
 }
 
 //----------------------------------MAIN------------------------------------------------//
-
 void loop() 
 {
     ceas(&zeci_secunde, &secunde_curente, &tic_tac_secunde); 
 }
 
+//----------------------------------Comunicare------------------------------------------------//
+void comunicare(byte cod)
+{
+    if( cod == 1 && cod <= 3)
+    {
+        ordine(cod);
+    }
+    else
+    {
+        if( ordine(2) ) // A returnat 1
+        {
+            Serial.write((byte)cod);
+        }
+        comunicare(1000);
+    }
+
+}
+
+boolean ordine(byte cod)
+{
+    boolean confirmare_serial = 0;
+    switch(cod)
+    {
+        // ----------Confirmare sincronizare----------//
+        case 1:
+        {
+            // Trimite un semnal
+            Serial.write((boolean)1);
+
+            // Asteapta sa confirme ca este sincronizat
+            while(!confirmare_serial)
+            {
+                if(Serial.available() > 0)
+                {
+                    confirmare_serial = Serial.read();
+                }
+            }
+
+            // Ii trimit ca am auzit semnalul lui
+            Serial.write(confirmare_serial);
+        }
+        break;
+
+        // ----------Vreau sa zic ceva----------//
+        case 2:
+        {
+            // Trimit ca vreau sa ma asculte
+            // Ca nu cumva sa vrea el sa imi spuna ceva
+            Serial.write((byte)cod);
+
+            // Asteapta sa confirme ca este sincronizat
+            // Si este disponibil sa asculte
+            while(!confirmare_serial)
+            {
+                if(Serial.available() > 0)
+                {
+                    confirmare_serial = Serial.read();
+                }
+            }
+            
+            // Are ceva mai bun de zis
+            if(confirmare_serial == 3)
+            {
+                return 0;
+            }
+            // Este disponibil sa ma asculte
+            else
+            {
+                confirmare_serial = 0;
+            }
+                     
+            // El executa ce ii zic
+            // Codul merge mai departe 
+            return 1; 
+        }
+        break;
+
+        // ----------Trebuie sa ascult----------//
+        case 3:
+        {
+            
+        }
+        break;
+
+        // ---------Confirmare ca va executa-------- //
+        case 1000:
+        {
+            // Astept confirmare ca v-a executa
+            while(!confirmare_serial)
+            {
+                if(Serial.available() > 0)
+                {
+                    confirmare_serial = Serial.read();
+                }
+            }
+        }
+    }
+
+    // Daca nu este nici un caz
+    return 0;
+}
+
+//----------------------------------Telecomanda IR------------------------------------------------//
 short receptie()
 {
     if( irrecv.decode( &results ) )
@@ -85,42 +192,51 @@ short receptie()
     return 0;   
 }
 
+//----------------------------------Configurarea butoanelor------------------------------------------------//
 void configurare_butoane()
 {
     // Daca este un buton care nu are configuratie, incepe configurarea butoanelor
     if( !control[0] || !control[1] || !control[2] || !control[3] || !control[4] || !control[5])
     {
-        Serial.println("Nu ai butoanele configurate.");
+        Serial.println("Nu ai butoanele telecomenzii configurate.");
+        comunicare(101);
         delay(500);
-        Serial.println("Asa ca incepem sa configuram butoanele.");
+        Serial.println("Incepem sa configuram butoanele.");
+        comunicare(102);
         configurare_butoane();
     }
     else
     {
         Serial.println("Ai butoane configurate.");
+        comunicare(120);        
         delay(1000);
         Serial.println("Daca doresti sa configurezi alta telecomanda.");
         delay(1000);
         Serial.println("Apasa orice tasta in afata de OK.");
         delay(1000);
         Serial.println("Daca doresti sa continui cu butoanele configurate, apasa 'Bine'.");
+        
         do
         {
             int valoare = receptie();
             if(valoare != control[0] && valoare != 0)
             {
                 Serial.println("");
-                Serial.println("Incepem configurarea butoanelor.");
+                Serial.println("Incepem sa configuram butoanele.");
+                comunicare(104);
                 Serial.println("");
                 incepe_configurare_butoane();
             }
             if(valoare == control[0])
             {
-               break;
+                Serial.println("Ai pastrat configurarea butoanelor.");
+                comunicare(121);
+                break;
             }
         }while(1);
     }
 }
+
 void incepe_configurare_butoane()
 {
     boolean flag = 1;
@@ -129,9 +245,11 @@ void incepe_configurare_butoane()
     do
     {
         Serial.println("Apasa o tasta pentru a seta butonul `Bine`.");
+        comunicare(103);
         if( setare_buton(&control[0]) )
         {
             Serial.println("Ai setat butonul 'Bine'.");
+            comunicare(104);
             Serial.println("");
             flag = 0;
         }              
@@ -141,11 +259,13 @@ void incepe_configurare_butoane()
     do
     {
         Serial.println("Apasa o tasta pentru seta butonul `Anulare`.");
+        comunicare(105);
         if( setare_buton(&control[1]) )
         {
             if(control[1] != control[0])
             {
                 Serial.println("Ai setat butonul 'Anulare'.");
+                comunicare(106);
                 Serial.println("");
                 flag = 0;
             }
@@ -153,6 +273,7 @@ void incepe_configurare_butoane()
             {
                 Serial.println("Acesta tasta este deja utilizata.");
                 Serial.println("Te rog sa incerci din nou o alta tasta");
+                comunicare(150);
             }
             
         }       
@@ -164,6 +285,7 @@ void incepe_configurare_butoane()
         flag_error = 0;
         
         Serial.println("Apasa o tasta pentru seta butonul `Inainte`.");
+        comunicare(107);
         if( setare_buton(&control[2]) )
         {
             for(byte i = 0; i < 2; i++)
@@ -172,6 +294,7 @@ void incepe_configurare_butoane()
                 {
                     Serial.println("Acesta tasta este deja utilizata.");
                     Serial.println("Te rog sa incerci din nou o alta tasta");
+                    comunicare(150);
                     flag_error = 1;
                     continue;
                 }
@@ -181,6 +304,7 @@ void incepe_configurare_butoane()
             {
                 Serial.println("Ai setat butonul 'Inainte'.");
                 Serial.println("");
+                comunicare(108);
                 flag = 0;
             }
             
@@ -193,6 +317,7 @@ void incepe_configurare_butoane()
         flag_error = 0;
         
         Serial.println("Apasa o tasta pentru seta butonul `Inapoi`.");
+        comunicare(109);
         if( setare_buton(&control[3]) )
         {
             for(byte i = 0; i < 3; i++)
@@ -201,6 +326,7 @@ void incepe_configurare_butoane()
                 {
                     Serial.println("Acesta tasta este deja utilizata.");
                     Serial.println("Te rog sa incerci din nou o alta tasta");
+                    comunicare(150);
                     flag_error = 1;
                     continue;
                 }
@@ -210,6 +336,7 @@ void incepe_configurare_butoane()
             {
                 Serial.println("Ai setat butonul 'Inapoi'.");
                 Serial.println("");
+                comunicare(110);
                 flag = 0;
             }
             
@@ -222,6 +349,7 @@ void incepe_configurare_butoane()
         flag_error = 0;
         
         Serial.println("Apasa o tasta pentru seta butonul `Stanga`.");
+        comunicare(111);
         if( setare_buton(&control[4]) )
         {
             for(byte i = 0; i < 4; i++)
@@ -230,6 +358,7 @@ void incepe_configurare_butoane()
                 {
                     Serial.println("Acesta tasta este deja utilizata.");
                     Serial.println("Te rog sa incerci din nou o alta tasta");
+                    comunicare(150);
                     flag_error = 1;
                     continue;
                 }
@@ -239,6 +368,7 @@ void incepe_configurare_butoane()
             {
                 Serial.println("Ai setat butonul 'Stanga'.");
                 Serial.println("");
+                comunicare(112);
                 flag = 0;
             }
             
@@ -251,6 +381,7 @@ void incepe_configurare_butoane()
         flag_error = 0;
         
         Serial.println("Apasa o tasta pentru seta butonul `Dreapta`.");
+        comunicare(113);
         if( setare_buton(&control[5]) )
         {
             for(byte i = 0; i < 5; i++)
@@ -259,6 +390,7 @@ void incepe_configurare_butoane()
                 {
                     Serial.println("Acesta tasta este deja utilizata.");
                     Serial.println("Te rog sa incerci din nou o alta tasta");
+                    comunicare(150);
                     flag_error = 1;
                     continue;
                 }
@@ -268,6 +400,7 @@ void incepe_configurare_butoane()
             {
                 Serial.println("Ai setat butonul 'Dreapta'.");
                 Serial.println("");
+                comunicare(114);
                 flag = 0;
             }
             
@@ -294,6 +427,7 @@ boolean setare_buton(int *buton)
                 {
                     Serial.println("Am primit un semnal.");
                     Serial.println("Apasa pe acelasi buton pentru a confirma.");
+                    comunicare(151);
                     tic_tac = 1;
                 } 
                 confirmare = receptie();
@@ -306,6 +440,7 @@ boolean setare_buton(int *buton)
                 if(confirmare != 0 && confirmare != *buton)
                 {
                     Serial.println("Nu a fost acelasi buton.");
+                    comunicare(152);
                     return 0;    
                 }                       
             }while(1);
