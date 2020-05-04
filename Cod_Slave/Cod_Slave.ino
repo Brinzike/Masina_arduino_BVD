@@ -8,10 +8,8 @@
 //----------------------------------INCLUDE C------------------------------------------------------------//
 #include "control_motoare_BVD.c"
 #include "ceas_BVD.c"
-#include "masoara_distanta_BVD.c"
 
 //----------------------------------SETARI PINI-----------------------------------------------------------//
-
 // Setari telecomanda
 const byte PIN_IR_RECEPTIE = 2;
 IRrecv irrecv(PIN_IR_RECEPTIE);
@@ -203,7 +201,28 @@ byte modul(float termen)
 //----------------------------------Evitare obstacole------------------------------------------------//
 void evitare_obstacole()
 {
-    // mergi in fata pana cand distanta din fata este < 20
+    // te uiti +- 10 grade stanga dreapta
+        // te uiti la 90 Grade
+        // faci masuratoare
+
+        // te uiti la 80 Grade
+        // faci masuratoare
+
+        // te uiti la 100 Grade
+        // faci masuratoare
+    
+    // compari rezultatele si trebuie sa afli care este ce-a mai apropiata de adevar
+    
+    // daca distanta > 30 cm
+        // maresti viteza progresiv
+        
+    // daca distnata < 30 cm si > 20
+        // incetinesti progresiv
+        
+    // daca distanta < 20 cm
+        // fa toate masuratorile
+            // decide in ce parte sa mergi
+    
 }
 
 void fa_masuratorile()
