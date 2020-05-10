@@ -13,7 +13,7 @@ const byte PIN_IR_RECEPTIE = 2;
 IRrecv irrecv(PIN_IR_RECEPTIE);
 decode_results results;
 short valoare_recive = 0;
-short control[6] = {-32131,765,-22441,-30601,2295,18615}; // Bine = 0, Schimba modul = 1, Inainte = 2, Inapoi = 3, Stanga = 4, Dreapta = 5;
+int control[6] = {-32131,765,-22441,-30601,2295,18615}; // Bine = 0, Schimba modul = 1, Inainte = 2, Inapoi = 3, Stanga = 4, Dreapta = 5;
 
 // Setare pini motoare
 const byte PINI_MOTOARE[] = {9,10,5,6}; // (PWM) M_stanga_+ = 9(B-1B), M_stanga_- = 10(B-1A), M_dreapta_+ = 5(A-1A), M_dreapta_- = 6(A-1B)
@@ -25,12 +25,13 @@ boolean tic_tac_secunde = 0;
 
 // Comunicare I2C
 const int16_t I2C_SLAVE = 0x08;
-byte cod = 0;
+byte cod[10] = {0,0,0,0,0,0,0,0,0,0};
 
 //========================================SETUP========================================//
 void setup() 
 { 
-    Serial.begin(115200);
+    
+    Serial.begin(115200);;
     Wire.begin(I2C_SLAVE);
     Wire.onRequest(requestEvent);
 
@@ -42,19 +43,32 @@ void setup()
     
     // --Start IR------------------------------//
     irrecv.enableIRIn();
-
-    cod = 1;
     
+    update_cod(1);
     // --SETUP butoane------------------------------//
-    //configurare_butoane();  
-
-    cod = 1;
+    configurare_butoane();  
 }
 
 void requestEvent() 
 {
-    Wire.write(cod);
-    cod = 0;
+    Wire.write(cod[0]);
+    // Update cod
+    for(byte i = 0; i < 9; i ++)
+    {
+        if( cod[i + 1] != 0 )
+        {
+            cod[i] = cod[i + 1];
+        }
+        else
+        {
+            cod[i] = 0;
+            break;
+        }
+    }
+    if( cod[9] != 0 )
+    {
+        cod[9] = 0;
+    }
 }
 //========================================END SETUP========================================//
 //-----------------------------------------------------------------------------------------//
@@ -66,7 +80,23 @@ void loop()
 //========================================END MAIN========================================//
 //----------------------------------------------------------------------------------------//
 //========================================FUNCTII=========================================//
-
+//------------------------------Comunicare--------------------//
+void update_cod(byte codul)
+{
+    // executa pana cand se elibereaza ultima pozitie
+    while( cod[9] != 0 )
+    {        
+    }
+    
+    for( byte i = 0; i < 10; i++ )
+    {
+        if(cod[i] == 0 )
+        {
+            cod[i] = codul;
+            break;
+        }
+    }
+}
 //------------------------------Telecomanda IR--------------------//
 short receptie()
 {
@@ -93,216 +123,145 @@ void configurare_butoane()
     // Daca este un buton care nu are configuratie, incepe configurarea butoanelor
     if( !control[0] || !control[1] || !control[2] || !control[3] || !control[4] || !control[5])
     {
-        Serial.println("Nu ai butoanele telecomenzii configurate.");
-//        comunicare(101);
-        delay(500);
-        Serial.println("Incepem sa configuram butoanele.");
-//        comunicare(102);
-        configurare_butoane();
+        update_cod(101);       
+        incepe_configurare_butoane();
     }
     else
     {
-        Serial.println("Ai butoane configurate.");
-//        comunicare(120);        
-        delay(1000);
-        Serial.println("Daca doresti sa configurezi alta telecomanda.");
-        delay(1000);
-        Serial.println("Apasa orice tasta in afata de OK.");
-        delay(1000);
-        Serial.println("Daca doresti sa continui cu butoanele configurate, apasa 'Bine'.");
-        
-        do
+        update_cod(103);
+
+        boolean flag = 1;
+        while(flag)
         {
             int valoare = receptie();
             if(valoare != control[0] && valoare != 0)
             {
-                Serial.println("");
-                Serial.println("Incepem sa configuram butoanele.");
-//                comunicare(104);
-                Serial.println("");
+                // Configureaza butoanele
+                
                 incepe_configurare_butoane();
-            }
-            if(valoare == control[0])
+                flag = 0;
+            }else if(valoare == control[0])
             {
-                Serial.println("Ai pastrat configurarea butoanelor.");
-//                comunicare(121);
-                break;
+                // Pastreaza setarile
+                update_cod(104);
+                flag = 0;
             }
-        }while(1);
+        }
     }
 }
 
 void incepe_configurare_butoane()
 {
-    boolean flag = 1;
-    boolean flag_error = 0;
+    update_cod(102);
+    boolean flag_error = 1;
     // --------------------------Bine[0]--------------------------//
-    do
+    while( !setare_buton(&control[0]) ) // 1- daca este este setat, 0- daca nu este setat
     {
-        Serial.println("Apasa o tasta pentru a seta butonul `Bine`.");
-//        comunicare(103);
-        if( setare_buton(&control[0]) )
-        {
-            Serial.println("Ai setat butonul 'Bine'.");
-//            comunicare(104);
-            Serial.println("");
-            flag = 0;
-        }              
-    }while(flag);
-    flag = 1;
+        update_cod(105);
+    }
+    update_cod(106);
     // --------------------------Anulare[1]--------------------------//
-    do
+    while( flag_error )
     {
-        Serial.println("Apasa o tasta pentru seta butonul `Anulare`.");
-//        comunicare(105);
-        if( setare_buton(&control[1]) )
+        if( verifica_buton(2, 107) )
         {
-            if(control[1] != control[0])
-            {
-                Serial.println("Ai setat butonul 'Anulare'.");
-//                comunicare(106);
-                Serial.println("");
-                flag = 0;
-            }
-            else
-            {
-                Serial.println("Acesta tasta este deja utilizata.");
-                Serial.println("Te rog sa incerci din nou o alta tasta");
-//                comunicare(150);
-            }
-            
-        }       
-    }while(flag);
-    flag = 1;
+            flag_error = 0;
+        }
+        else
+        {
+            update_cod(151);
+            update_cod(152);      
+        }
+    }
+    update_cod(108);
+    flag_error = 1;
     // --------------------------Inainte[2]--------------------------//
-    do
+    while( flag_error )
     {
-        flag_error = 0;
-        
-        Serial.println("Apasa o tasta pentru seta butonul `Inainte`.");
-//        comunicare(107);
-        if( setare_buton(&control[2]) )
+        if( verifica_buton(2, 109) )
         {
-            for(byte i = 0; i < 2; i++)
-            {
-                if( control[2] == control[i] )
-                {
-                    Serial.println("Acesta tasta este deja utilizata.");
-                    Serial.println("Te rog sa incerci din nou o alta tasta");
-//                    comunicare(150);
-                    flag_error = 1;
-                    continue;
-                }
-            }
-            
-            if(!flag_error)
-            {
-                Serial.println("Ai setat butonul 'Inainte'.");
-                Serial.println("");
-//                comunicare(108);
-                flag = 0;
-            }
-            
-        }       
-    }while(flag);
-    flag = 1;
+            flag_error = 0;
+        }
+        else
+        {
+            update_cod(151);
+            update_cod(152);      
+        }
+    }
+    update_cod(110);
+    flag_error = 1;
     // --------------------------Inapoi[3]--------------------------//
-    do
+    while( flag_error )
     {
-        flag_error = 0;
-        
-        Serial.println("Apasa o tasta pentru seta butonul `Inapoi`.");
-//        comunicare(109);
-        if( setare_buton(&control[3]) )
+        if( verifica_buton(2, 111) )
         {
-            for(byte i = 0; i < 3; i++)
-            {
-                if( control[3] == control[i] )
-                {
-                    Serial.println("Acesta tasta este deja utilizata.");
-                    Serial.println("Te rog sa incerci din nou o alta tasta");
-//                    comunicare(150);
-                    flag_error = 1;
-                    continue;
-                }
-            }
-            
-            if(!flag_error)
-            {
-                Serial.println("Ai setat butonul 'Inapoi'.");
-                Serial.println("");
-//                comunicare(110);
-                flag = 0;
-            }
-            
-        }       
-    }while(flag);
-    flag = 1;
+            flag_error = 0;
+        }
+        else
+        {
+            update_cod(151);
+            update_cod(152);      
+        }
+    }
+    update_cod(112);
+    flag_error = 1;
     // --------------------------Stanga[4]--------------------------//
-    do
+    while( flag_error )
     {
-        flag_error = 0;
-        
-        Serial.println("Apasa o tasta pentru seta butonul `Stanga`.");
-//        comunicare(111);
-        if( setare_buton(&control[4]) )
+        if( verifica_buton(2, 113) )
         {
-            for(byte i = 0; i < 4; i++)
-            {
-                if( control[4] == control[i] )
-                {
-                    Serial.println("Acesta tasta este deja utilizata.");
-                    Serial.println("Te rog sa incerci din nou o alta tasta");
-//                    comunicare(150);
-                    flag_error = 1;
-                    continue;
-                }
-            }
-            
-            if(!flag_error)
-            {
-                Serial.println("Ai setat butonul 'Stanga'.");
-                Serial.println("");
-//                comunicare(112);
-                flag = 0;
-            }
-            
-        }       
-    }while(flag);
-    flag = 1;
+            flag_error = 0;
+        }
+        else
+        {
+            update_cod(151);
+            update_cod(152);      
+        }
+    }
+    update_cod(114);
+    flag_error = 1;
     // --------------------------Dreapta[5]--------------------------//
-    do
+    while( flag_error )
     {
-        flag_error = 0;
-        
-        Serial.println("Apasa o tasta pentru seta butonul `Dreapta`.");
-//        comunicare(113);
-        if( setare_buton(&control[5]) )
+        if( verifica_buton(2, 115) )
         {
-            for(byte i = 0; i < 5; i++)
+            flag_error = 0;
+        }
+        else
+        {
+            update_cod(151);
+            update_cod(152);      
+        }
+    }
+    update_cod(116);
+    flag_error = 1;
+    // --------------------------Pnetru adaugare mai multe butoane--------------------------//
+}
+
+boolean verifica_buton(byte nr_buton, byte cod_mesaj)
+{
+    boolean flag = 1;     
+    while( flag )
+    {
+        update_cod(cod_mesaj); 
+        if( setare_buton(&control[nr_buton]) )
+        {
+            // verifica daca sunt alte butoane setate deja cu acest cod
+            for(byte i = 0; i < nr_buton; i++)
             {
-                if( control[5] == control[i] )
+                flag = 0;
+                // Daca gaseste un buton asemanator
+                if( control[nr_buton] == control[i] )
                 {
-                    Serial.println("Acesta tasta este deja utilizata.");
-                    Serial.println("Te rog sa incerci din nou o alta tasta");
-//                    comunicare(150);
-                    flag_error = 1;
+                    update_cod(150);
+                    flag = 1;
                     continue;
                 }
+                // Daca nu pleaca mai departe cu flag 0
             }
-            
-            if(!flag_error)
-            {
-                Serial.println("Ai setat butonul 'Dreapta'.");
-                Serial.println("");
-//                comunicare(114);
-                flag = 0;
-            }
-            
-        }       
-    }while(flag);
-    flag = 1;
-
+        }
+    } 
+    return 1;
 }
 
 boolean setare_buton(int *buton)
@@ -310,35 +269,34 @@ boolean setare_buton(int *buton)
     *buton = 0;
     boolean tic_tac = 0; 
     int confirmare = 0;
-    do
+    while(1)
     {    
         *buton = receptie();
         delay(300); 
         if( *buton != 0)
         {
-            do
+            while(1)
             {               
                 if(!tic_tac)
                 {
-                    Serial.println("Am primit un semnal.");
-                    Serial.println("Apasa pe acelasi buton pentru a confirma.");
-//                    comunicare(151);
+                    update_cod(117);
                     tic_tac = 1;
                 } 
                 confirmare = receptie();
                 delay(300);          
                 if(confirmare != 0 && confirmare == *buton)
                 {
+                    // Butonul a fost validat
                     return 1;
                 }
                         
                 if(confirmare != 0 && confirmare != *buton)
                 {
-                    Serial.println("Nu a fost acelasi buton.");
-//                    comunicare(152);
+                    // Nu a fost acelasi buton
+                    update_cod(118);
                     return 0;    
                 }                       
-            }while(1);
+            }
         }
-    }while(1);
+    }
 }
