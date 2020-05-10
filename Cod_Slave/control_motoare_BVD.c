@@ -1,33 +1,26 @@
 #include "Arduino.h"
 
-int directie (int directie, int viteza, byte pin[4], boolean DAI[2])
+void directie (int directie, int viteza, byte pin[4])
 {
-    // Ia valori de la 0 la 255
-    // La mine 0 = HIGH, 1 = LOW
-    if(DAI[0] == 1 && DAI[1] == 0)
-    {
-        viteza = 255 - viteza;
-    }
-    
     switch(directie)
     {
          case 0:
         {
               // Repaus
-            digitalWrite(pin[0], DAI[0]);
-            digitalWrite(pin[1], DAI[0]);
-            digitalWrite(pin[2], DAI[0]);
-            digitalWrite(pin[3], DAI[0]);         
+            digitalWrite(pin[0], LOW);
+            digitalWrite(pin[1], LOW);
+            digitalWrite(pin[2], LOW);
+            digitalWrite(pin[3], LOW);         
         }
         break;
         
         case 1:
         {         
             // STOP
-            digitalWrite(pin[0], DAI[1]);
-            digitalWrite(pin[1], DAI[1]);
-            digitalWrite(pin[2], DAI[1]);
-            digitalWrite(pin[3], DAI[1]);           
+            digitalWrite(pin[0], HIGH);
+            digitalWrite(pin[1], HIGH);
+            digitalWrite(pin[2], HIGH);
+            digitalWrite(pin[3], HIGH);           
         }
         break;
 
@@ -35,39 +28,39 @@ int directie (int directie, int viteza, byte pin[4], boolean DAI[2])
         {
             // In fata la viteza
             analogWrite(pin[0], viteza );
-            digitalWrite(pin[1], DAI[0]);
+            digitalWrite(pin[1], LOW);
             analogWrite(pin[2], viteza );
-            digitalWrite(pin[3], DAI[0]);            
+            digitalWrite(pin[3], LOW);            
         }
         break;
 
         case 3:
         {
-            // In spate
-            digitalWrite(pin[0], DAI[0]);
-            digitalWrite(pin[1], DAI[1]);
-            digitalWrite(pin[2], DAI[0]);
-            digitalWrite(pin[3], DAI[1]);           
+            // In spate la viteza
+            digitalWrite(pin[0], LOW);
+            digitalWrite(pin[1], viteza);
+            digitalWrite(pin[2], LOW);
+            digitalWrite(pin[3], viteza);           
         }
         break;
 
         case 4:
         {
               // Rotire Stanga
-            digitalWrite(pin[0], DAI[0]);
-            digitalWrite(pin[1], DAI[1]);
-            digitalWrite(pin[2], DAI[1]);
-            digitalWrite(pin[3], DAI[0]);        
+            digitalWrite(pin[0], LOW);
+            digitalWrite(pin[1], HIGH);
+            digitalWrite(pin[2], HIGH);
+            digitalWrite(pin[3], LOW);        
         }
         break;
         
         case 5:
         {
             // Rotire Dreapta
-            digitalWrite(pin[0], DAI[1]);
-            digitalWrite(pin[1], DAI[0]);
-            digitalWrite(pin[2], DAI[0]);
-            digitalWrite(pin[3], DAI[1]); 
+            digitalWrite(pin[0], HIGH);
+            digitalWrite(pin[1], LOW);
+            digitalWrite(pin[2], LOW);
+            digitalWrite(pin[3], HIGH); 
                        
         }
         break;
@@ -76,19 +69,19 @@ int directie (int directie, int viteza, byte pin[4], boolean DAI[2])
         {
             // Vireaza stanga
             analogWrite(pin[0], viteza );
-            digitalWrite(pin[1], DAI[0]);
-            digitalWrite(pin[2], DAI[1]);
-            digitalWrite(pin[3], DAI[0]);
+            digitalWrite(pin[1], LOW);
+            digitalWrite(pin[2], HIGH);
+            digitalWrite(pin[3], LOW);
         }
         break;
 
         case 7:
         {
             //Vireaza dreapta
-            digitalWrite(pin[0], DAI[1]);
-            digitalWrite(pin[1], DAI[0]);
+            digitalWrite(pin[0], HIGH);
+            digitalWrite(pin[1], LOW);
             analogWrite(pin[2], viteza );
-            digitalWrite(pin[3], DAI[0]);           
+            digitalWrite(pin[3], LOW);           
         }
         break;
     }
