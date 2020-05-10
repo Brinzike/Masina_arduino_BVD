@@ -123,7 +123,7 @@ void cerere_slave()
         {
             case 0:
             {
-                
+                // nu face nimic
             }
             break;
 
@@ -132,6 +132,149 @@ void cerere_slave()
                 temp = " Partenerul este gata  ";
             }
             break;
+
+            case 101:
+            {
+                temp = " Nu ai butoanele configurate  ";
+            }
+            break;
+            
+            case 102:
+            {
+                temp = " Incepem sa configuram butoanele  ";
+            }
+            break;
+            
+            case 103:
+            {
+                temp = " Ai butoane configurate  ";
+                adauga_eveniment(temp);
+                temp = "0";
+                temp = " Daca doresti sa continui cu butoanele configurate, apasa 'Bine'  ";
+                adauga_eveniment(temp);
+                temp = "0";
+                temp = " Daca doresti sa configurezi alta telecomanda apasa orice tasta  ";
+            }
+            break;
+            
+            case 104:
+            {
+                temp = " Ai pastrat configurarea butoanelor  ";
+            }
+            break;
+            
+            case 105:
+            {
+                temp = " Apasa o tasta pentru 'Bine'  ";
+            }
+            break;
+            
+            case 106:
+            {
+                temp = " Ai setat butonul 'Bine' ";
+            }
+            break;
+            
+            case 107:
+            {
+                temp = " Apasa o tasta pentru 'Anulare'  ";
+            }
+            break;
+            
+            case 108:
+            {
+                temp = " Ai setat butonul 'Anulare' ";
+            }
+            break;
+            
+            case 109:
+            {
+                temp = " Apasa o tasta pentru seta butonul `Inainte`  ";
+            }
+            break;
+            
+            case 110:
+            {
+                temp = " Ai setat butonul 'Inainte'  ";
+            }
+            break;
+            
+            case 111:
+            {
+                temp = " Apasa o tasta pentru seta butonul `Inapoi`  ";
+            }
+            break;
+            
+            case 112:
+            {
+                temp = " Ai setat butonul 'Inapoi'  ";
+            }
+            break;
+            
+            case 113:
+            {
+                temp = " Apasa o tasta pentru seta butonul `Stanga`  ";
+            }
+            break;
+            
+            case 114:
+            {
+                temp = " Ai setat butonul 'Stanga'  ";
+            }
+            break;
+            
+            case 115:
+            {
+                temp = " Apasa o tasta pentru seta butonul `Dreapta`  ";
+            }
+            break;
+            
+            case 116:
+            {
+                temp = " Ai setat butonul 'Dreapta'  ";
+            }
+            break;
+            
+            case 117:
+            {
+                temp = " Am primit un semnal  ";
+                adauga_eveniment(temp);
+                temp = "0";
+                temp = " Apasa pe acelasi buton pentru a confirma  ";
+            }
+            break;
+            
+            case 118:
+            {
+                temp = " Nu a fost acelasi buton  ";
+            }
+            break;
+            
+            case 150:
+            {
+                temp = " Acesta tasta este deja utilizata  ";
+                adauga_eveniment(temp);
+                temp = "0";
+                temp = " Te rog sa incerci din nou o alta tasta  ";
+            }
+            break;
+            
+            case 151:
+            {
+                temp = " A intervenit o eroare  ";
+            }
+            break;
+            
+            case 152:
+            {
+                temp = " Mai incercam o data sa setam butonul ";
+            }
+            break;
+
+            default:
+            {
+                temp = " Nu am codul pe care l-a trimis partenerul  ";
+            }
         }   
 
         if( cod )
@@ -286,7 +429,7 @@ void adauga_eveniment(String eveniment)
         linie_2 = "0";
         linie_3 = "0";
     }
-    afiseaza(linie_0, linie_1, linie_2, linie_3, pozitie, &numaratoare);
+    //afiseaza(linie_0, linie_1, linie_2, linie_3, pozitie, &numaratoare);
 }
 
 void afiseaza(String text_0, String text_1, String text_2, String text_3, byte poz[4], byte *ordine)
