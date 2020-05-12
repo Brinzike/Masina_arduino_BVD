@@ -46,11 +46,13 @@ void setup()
     Wire.begin();
     Serial.begin(115200);
     adauga_eveniment(" A pornit sistenuml :))  ");
+    refresh_lcd();
     delay(500);
     
     // ---------------------- Connect WiFi------------------//
     WiFi.begin(ssid, password);
     adauga_eveniment(" Astept sa ma conectez...  ");
+    refresh_lcd();
     while(WiFi.status() != WL_CONNECTED )
     {
         delay(500);
@@ -58,11 +60,13 @@ void setup()
     if( WiFi.status() == WL_CONNECTED)
     {
         adauga_eveniment(" WiFi Conectat!  ");
+        refresh_lcd();
         delay(500);
         
         adauga_eveniment(" Adresa IP: ");
         temp = " " + IpAddress2String(WiFi.localIP());
         adauga_eveniment(temp);
+        refresh_lcd();
         delay(500);
         temp = "0";       
     }
@@ -70,6 +74,7 @@ void setup()
     {
         adauga_eveniment(" Eroare!  ");
         adauga_eveniment(" Nu m-am conectat la WiFi  ");
+        refresh_lcd();
         delay(1000);        
     }
 
@@ -82,30 +87,9 @@ void setup()
 void loop() 
 {
     ceas(&zeci_secunde, &secunde_curente, &tic_tac_secunde);
+    refresh_lcd();
 
-    if( zeci_secunde == 3 )
-    {
-        if( tic_tac_afisare == 0 )
-        {
-            cerere_slave();
-            afiseaza(linie_0, linie_1, linie_2, linie_3, pozitie, &numaratoare);
-            tic_tac_afisare = 1;
-        }
-    }
-    else if( zeci_secunde == 8 )
-    {
-        if( tic_tac_afisare == 0 )
-        {
-            afiseaza(linie_0, linie_1, linie_2, linie_3, pozitie, &numaratoare);
-            tic_tac_afisare = 1;
-        }
-        
-    }
-    else
-    {
-        Serial.println("A intrat in else");
-        tic_tac_afisare = 0;
-    }
+    
 
     
 }
@@ -133,15 +117,69 @@ void cerere_slave()
             }
             break;
 
+            case 10:
+            {
+                temp = " Stop";
+            }
+            break;
+            
+            case 11:
+            {
+                temp = " Inainte";
+            }
+            break;
+
+            case 12:
+            {
+                temp = " Inapoi";
+            }
+            break;
+
+            case 13:
+            {
+                temp = " Usor Stanga";
+            }
+            break;
+
+            case 14:
+            {
+                temp = " Usor Dreapta";
+            }
+            break;
+
+            case 15:
+            {
+                temp = " Stanga";
+            }
+            break;
+
+            case 16:
+            {
+                temp = " Dreapta";
+            }
+            break;
+
+            case 50:
+            {
+                temp = " Telecomanda";
+            }
+            break;
+
+            case 51:
+            {
+                temp = " Urmareste Linia";
+            }
+            break;
+            
             case 101:
             {
-                temp = " Nu ai butoanele configurate  ";
+                temp = " Butoane neconfigurate  ";
             }
             break;
             
             case 102:
             {
-                temp = " Incepem sa configuram butoanele  ";
+                temp = " Configuram butoanele  ";
             }
             break;
             
@@ -150,97 +188,97 @@ void cerere_slave()
                 temp = " Ai butoane configurate  ";
                 adauga_eveniment(temp);
                 temp = "0";
-                temp = " Daca doresti sa continui cu butoanele configurate, apasa 'Bine'  ";
+                temp = " Pt continuare cu butoanele configurate, apasa 'Bine'  ";
                 adauga_eveniment(temp);
                 temp = "0";
-                temp = " Daca doresti sa configurezi alta telecomanda apasa orice tasta  ";
+                temp = " Pt conf alta telecomanda apasa orice tasta  ";
             }
             break;
             
             case 104:
             {
-                temp = " Ai pastrat configurarea butoanelor  ";
+                temp = " Ai pastrat conf butoanelor  ";
             }
             break;
             
             case 105:
             {
-                temp = " Apasa o tasta pentru 'Bine'  ";
+                temp = " Apasa pt BINE";
             }
             break;
             
             case 106:
             {
-                temp = " Ai setat butonul 'Bine' ";
+                temp = " Setat BINE";
             }
             break;
             
             case 107:
             {
-                temp = " Apasa o tasta pentru 'Anulare'  ";
+                temp = " Apasa pt ANULARE";
             }
             break;
             
             case 108:
             {
-                temp = " Ai setat butonul 'Anulare' ";
+                temp = " Setat ANULARE";
             }
             break;
             
             case 109:
             {
-                temp = " Apasa o tasta pentru seta butonul `Inainte`  ";
+                temp = " Apasa pt INAINTE";
             }
             break;
             
             case 110:
             {
-                temp = " Ai setat butonul 'Inainte'  ";
+                temp = " Setat INAINTE";
             }
             break;
             
             case 111:
             {
-                temp = " Apasa o tasta pentru seta butonul `Inapoi`  ";
+                temp = " Apasa pt INAPOI";
             }
             break;
             
             case 112:
             {
-                temp = " Ai setat butonul 'Inapoi'  ";
+                temp = " Setat INAPOI";
             }
             break;
             
             case 113:
             {
-                temp = " Apasa o tasta pentru seta butonul `Stanga`  ";
+                temp = " Apasa pt STANGA";
             }
             break;
             
             case 114:
             {
-                temp = " Ai setat butonul 'Stanga'  ";
+                temp = " Setat STANGA";
             }
             break;
             
             case 115:
             {
-                temp = " Apasa o tasta pentru seta butonul `Dreapta`  ";
+                temp = " Apasa pt DREAPTA";
             }
             break;
             
             case 116:
             {
-                temp = " Ai setat butonul 'Dreapta'  ";
+                temp = " Setat DREAPTA";
             }
             break;
             
             case 117:
             {
-                temp = " Am primit un semnal  ";
+                temp = " Am primit semnal";
                 adauga_eveniment(temp);
                 temp = "0";
-                temp = " Apasa pe acelasi buton pentru a confirma  ";
+                temp = " Apasa din nou";
             }
             break;
             
@@ -249,13 +287,37 @@ void cerere_slave()
                 temp = " Nu a fost acelasi buton  ";
             }
             break;
+
+            case 120:
+            {
+                temp = " Inainte";
+            }
+            break;
+            
+            case 121:
+            {
+                temp = " Inapoi";
+            }
+            break;
+
+            case 122:
+            {
+                temp = " Stanga";
+            }
+            break;
+
+            case 123:
+            {
+                temp = " Dreapta";
+            }
+            break;
             
             case 150:
             {
-                temp = " Acesta tasta este deja utilizata  ";
+                temp = " Tasta utilizata";
                 adauga_eveniment(temp);
                 temp = "0";
-                temp = " Te rog sa incerci din nou o alta tasta  ";
+                temp = " Incearca alta tasta  ";
             }
             break;
             
@@ -267,7 +329,7 @@ void cerere_slave()
             
             case 152:
             {
-                temp = " Mai incercam o data sa setam butonul ";
+                temp = " Incercam inca o data sa setam butonul ";
             }
             break;
 
@@ -377,6 +439,22 @@ void cerere_slave()
 //}
 
 //------------------------------Display----------------------------------//
+void refresh_lcd()
+{
+    if( zeci_secunde == 5 )
+    {
+        if( tic_tac_afisare == 0 )
+        {
+            cerere_slave();
+            afiseaza(linie_0, linie_1, linie_2, linie_3, pozitie, &numaratoare);
+            tic_tac_afisare = 1;
+        }
+    }
+    else
+    {
+        tic_tac_afisare = 0;
+    }
+}
 void adauga_eveniment(String eveniment)
 {
     if( linie_3[0] == '0' )
@@ -497,7 +575,7 @@ void printeaza_linie(String text, byte *pozitie)
 {
     byte nr_caractere = 17;
     
-    if( text.length() >= nr_caractere)
+    if( text.length() > nr_caractere)
     {
         if( text.length() >= (*pozitie + nr_caractere) )
         {

@@ -1,7 +1,14 @@
 #include "Arduino.h"
 
-void directie (int directie, int viteza, byte pin[4])
+void directie (byte directie, unsigned short viteza, byte pin[4])
 {
+    byte viteza_2 = 30;
+    if(viteza == 0)
+    {
+        viteza = 255;
+        viteza_2 = 255;
+    }
+
     switch(directie)
     {
          case 0:
@@ -27,7 +34,7 @@ void directie (int directie, int viteza, byte pin[4])
         case 2:
         {
             // In fata la viteza
-            analogWrite(pin[0], viteza );
+            analogWrite(pin[0], viteza - 10);
             digitalWrite(pin[1], LOW);
             analogWrite(pin[2], viteza );
             digitalWrite(pin[3], LOW);            
@@ -38,7 +45,7 @@ void directie (int directie, int viteza, byte pin[4])
         {
             // In spate la viteza
             digitalWrite(pin[0], LOW);
-            digitalWrite(pin[1], viteza);
+            digitalWrite(pin[1], viteza - 10);
             digitalWrite(pin[2], LOW);
             digitalWrite(pin[3], viteza);           
         }
@@ -68,9 +75,9 @@ void directie (int directie, int viteza, byte pin[4])
         case 6:
         {
             // Vireaza stanga
-            analogWrite(pin[0], viteza );
+            analogWrite(pin[0], viteza - viteza_2 );
             digitalWrite(pin[1], LOW);
-            digitalWrite(pin[2], HIGH);
+            analogWrite(pin[2], viteza);
             digitalWrite(pin[3], LOW);
         }
         break;
@@ -78,9 +85,9 @@ void directie (int directie, int viteza, byte pin[4])
         case 7:
         {
             //Vireaza dreapta
-            digitalWrite(pin[0], HIGH);
+            digitalWrite(pin[0], viteza);
             digitalWrite(pin[1], LOW);
-            analogWrite(pin[2], viteza );
+            analogWrite(pin[2], viteza - viteza_2 );
             digitalWrite(pin[3], LOW);           
         }
         break;

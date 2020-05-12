@@ -9,14 +9,15 @@
 
 //----------SETARI----------//
 // Setari telecomanda
-const byte PIN_IR_RECEPTIE = 2;
+const byte PIN_IR_RECEPTIE = 7;
 IRrecv irrecv(PIN_IR_RECEPTIE);
 decode_results results;
 short valoare_recive = 0;
 int control[6] = {-32131,765,-22441,-30601,2295,18615}; // Bine = 0, Schimba modul = 1, Inainte = 2, Inapoi = 3, Stanga = 4, Dreapta = 5;
+boolean tic_tac_comanda = 0;
 
 // Setare pini motoare
-const byte PINI_MOTOARE[] = {9,10,5,6}; // (PWM) M_stanga_+ = 9(B-1B), M_stanga_- = 10(B-1A), M_dreapta_+ = 5(A-1A), M_dreapta_- = 6(A-1B)
+const byte PINI_MOTOARE[] = {9,10,5,6}; // (PWM) M_stanga_+ = 9(B-1A), M_stanga_- = 10(B-1B), M_dreapta_+ = 5(A-1A), M_dreapta_- = 6(A-1B)
 
 // Ceas
 byte zeci_secunde = 0;
@@ -25,7 +26,16 @@ boolean tic_tac_secunde = 0;
 
 // Comunicare I2C
 const int16_t I2C_SLAVE = 0x08;
-byte cod[10] = {0,0,0,0,0,0,0,0,0,0};
+byte cod[100];
+byte last_cod = 0;
+
+// Urmaritor linie
+const byte PIN_SENZOR_IR[] = {A0, A1, A2}; // 0 = Stanga , 1 = Mijloc, 2 = Dreapta
+unsigned short valori_senzori_ir[3];
+
+// Variabile
+byte mod = 0;
+byte cazul_precedent = 0;
 
 //========================================SETUP========================================//
 void setup() 
@@ -34,11 +44,17 @@ void setup()
     Serial.begin(115200);;
     Wire.begin(I2C_SLAVE);
     Wire.onRequest(requestEvent);
+    Wire.onReceive(receiveEvent);
 
     // --SETUP pini------------------------------//
     for(byte i = 0; i < 4; i++)
     {
         pinMode(PINI_MOTOARE[i], OUTPUT);
+    }
+
+    for(byte i = 0; i < 3; i++)
+    {
+        pinMode(PIN_SENZOR_IR[i], INPUT);
     }
     
     // --Start IR------------------------------//
@@ -53,7 +69,7 @@ void requestEvent()
 {
     Wire.write(cod[0]);
     // Update cod
-    for(byte i = 0; i < 9; i ++)
+    for(byte i = 0; i < 99; i ++)
     {
         if( cod[i + 1] != 0 )
         {
@@ -65,17 +81,77 @@ void requestEvent()
             break;
         }
     }
-    if( cod[9] != 0 )
+    if( cod[99] != 0 )
     {
-        cod[9] = 0;
+        cod[99] = 0;
     }
 }
+
+void receiveEvent(int howMany) 
+{
+    while (1 < Wire.available()) 
+    {
+        byte cod = Wire.read();
+        Serial.print(cod);
+    }
+}
+
 //========================================END SETUP========================================//
 //-----------------------------------------------------------------------------------------//
 //========================================MAIN=============================================//
 void loop() 
 {
-  
+    ceas(&zeci_secunde, &secunde_curente, &tic_tac_secunde);
+    int comanda = 0;
+    
+    if( mod == 0 )
+    {
+        comanda = receptie();
+        delay(200);
+    }
+    else if( mod == 1)
+    {
+        if( zeci_secunde % 3 == 0)
+        {
+            if( tic_tac_comanda == 0 )
+            {
+                comanda = receptie();
+                if(comanda)
+                {
+                    tic_tac_comanda = 1;
+                }
+            }
+        }
+        else
+        {
+            tic_tac_comanda = 0;
+        }
+    }
+    
+    if( comanda == control[0] )
+    {
+        mod++;
+        if( mod == 2 )
+        {
+            mod = 0;
+        }
+        update_cod( (50 + mod) );
+    }
+
+    switch(mod)
+    {
+        case 0:
+        {
+            control_telecomanda(comanda);
+        }
+        break;
+
+        case 1:
+        {
+            urmareste_linia();
+        }
+        break;
+    }
 }
 //========================================END MAIN========================================//
 //----------------------------------------------------------------------------------------//
@@ -84,11 +160,11 @@ void loop()
 void update_cod(byte codul)
 {
     // executa pana cand se elibereaza ultima pozitie
-    while( cod[9] != 0 )
+    while( cod[99] != 0 )
     {        
     }
     
-    for( byte i = 0; i < 10; i++ )
+    for( byte i = 0; i < 99; i++ )
     {
         if(cod[i] == 0 )
         {
@@ -96,6 +172,91 @@ void update_cod(byte codul)
             break;
         }
     }
+}
+
+void mergi(byte cod, byte orientare, unsigned short viteza )
+{    
+    if(last_cod != cod && mod == 0)
+    {
+        last_cod = cod;
+        update_cod(cod);
+    }
+    directie(orientare, viteza, PINI_MOTOARE);
+}
+//------------------------------Urmaritor linie--------------------//
+void urmareste_linia()
+{
+    citeste_senzorii();
+
+    if( valori_senzori_ir[0] > 100 && valori_senzori_ir[1] < 100 && valori_senzori_ir[2] < 100 ) // Este pe stanga
+    {
+        mergi(13, 6, 160);
+        cazul_precedent = 1;
+    }
+    else if( valori_senzori_ir[0] < 100 && valori_senzori_ir[1] < 100 && valori_senzori_ir[2] > 100 ) // Este pe dreapta
+    {
+        mergi(14, 7, 160);
+        cazul_precedent = 2;
+    }
+    else if( valori_senzori_ir[0] < 100 && valori_senzori_ir[1] > 100 && valori_senzori_ir[2] < 100 ) // Este pe mijloc
+    {
+        mergi(11, 2, 180);
+        cazul_precedent = 3;
+    }
+    else if( valori_senzori_ir[0] > 100 && valori_senzori_ir[1] > 100 && valori_senzori_ir[2] > 100 ) // Este pe toti senzorii
+    {
+        mergi(11, 2, 180);
+    }
+    else if( valori_senzori_ir[0] < 100 && valori_senzori_ir[1] < 100 && valori_senzori_ir[2] < 100 ) // Nu mai este pe nici un senzor
+    {
+        if( cazul_precedent == 1 ) // A fost pe stanga
+        {
+            mergi(15, 6, 0);
+        }
+        else if( cazul_precedent == 2 ) // A fost pe dreapta
+        {
+            mergi(16, 7, 0);
+        }
+    }
+
+    // gaseste linie pe doi senzori linie
+    // Nu gaseste nici o linie
+}
+
+void citeste_senzorii()
+{
+    for(byte i = 0; i < 3; i++)
+    {
+        valori_senzori_ir[i] = analogRead(PIN_SENZOR_IR[i]);
+        Serial.print(valori_senzori_ir[i]);
+        Serial.print(" ");
+    }
+    Serial.println("");
+}
+
+//------------------------------Control Telecomanda IR--------------------//
+void control_telecomanda(int comanda)
+{
+    if( comanda == control[2] ) // Inainte
+        {
+            mergi(11, 2, 200);
+        }
+        else if( comanda == control[3] ) // Inapoi
+        {
+            mergi(12, 3, 170);
+        }
+        else if( comanda == control[4] ) // Vireaza Stanga
+        {
+            mergi(15, 6, 0);
+        }
+        else if( comanda == control[5] ) // Vireaza Dreapta
+        {
+            mergi(16, 7, 0);
+        }
+        else
+        {
+            mergi(10, 0, 0);
+        }
 }
 //------------------------------Telecomanda IR--------------------//
 short receptie()
@@ -134,10 +295,10 @@ void configurare_butoane()
         while(flag)
         {
             int valoare = receptie();
+            delay(300);
             if(valoare != control[0] && valoare != 0)
             {
                 // Configureaza butoanele
-                
                 incepe_configurare_butoane();
                 flag = 0;
             }else if(valoare == control[0])
@@ -152,18 +313,27 @@ void configurare_butoane()
 
 void incepe_configurare_butoane()
 {
-    update_cod(102);
+    update_cod(102);   
     boolean flag_error = 1;
     // --------------------------Bine[0]--------------------------//
-    while( !setare_buton(&control[0]) ) // 1- daca este este setat, 0- daca nu este setat
+    while( flag_error )
     {
-        update_cod(105);
+        if( verifica_buton(0, 105) )
+        {
+            flag_error = 0;
+        }
+        else
+        {
+            update_cod(151);
+            update_cod(152);      
+        }
     }
     update_cod(106);
+    flag_error = 1;
     // --------------------------Anulare[1]--------------------------//
     while( flag_error )
     {
-        if( verifica_buton(2, 107) )
+        if( verifica_buton(1, 107) )
         {
             flag_error = 0;
         }
@@ -193,7 +363,7 @@ void incepe_configurare_butoane()
     // --------------------------Inapoi[3]--------------------------//
     while( flag_error )
     {
-        if( verifica_buton(2, 111) )
+        if( verifica_buton(3, 111) )
         {
             flag_error = 0;
         }
@@ -208,7 +378,7 @@ void incepe_configurare_butoane()
     // --------------------------Stanga[4]--------------------------//
     while( flag_error )
     {
-        if( verifica_buton(2, 113) )
+        if( verifica_buton(4, 113) )
         {
             flag_error = 0;
         }
@@ -223,7 +393,7 @@ void incepe_configurare_butoane()
     // --------------------------Dreapta[5]--------------------------//
     while( flag_error )
     {
-        if( verifica_buton(2, 115) )
+        if( verifica_buton(5, 115) )
         {
             flag_error = 0;
         }
@@ -246,18 +416,25 @@ boolean verifica_buton(byte nr_buton, byte cod_mesaj)
         update_cod(cod_mesaj); 
         if( setare_buton(&control[nr_buton]) )
         {
-            // verifica daca sunt alte butoane setate deja cu acest cod
-            for(byte i = 0; i < nr_buton; i++)
+            if( nr_buton )
             {
-                flag = 0;
-                // Daca gaseste un buton asemanator
-                if( control[nr_buton] == control[i] )
+                // verifica daca sunt alte butoane setate deja cu acest cod
+                for(byte i = 0; i < nr_buton; i++)
                 {
-                    update_cod(150);
-                    flag = 1;
-                    continue;
+                    flag = 0;
+                    // Daca gaseste un buton asemanator
+                    if( control[nr_buton] == control[i] )
+                    {
+                        update_cod(150);
+                        flag = 1;
+                        break;
+                    }
+                    // Daca nu pleaca mai departe cu flag 0
                 }
-                // Daca nu pleaca mai departe cu flag 0
+            } 
+            else
+            {
+                return 1;
             }
         }
     } 
@@ -266,6 +443,7 @@ boolean verifica_buton(byte nr_buton, byte cod_mesaj)
 
 boolean setare_buton(int *buton)
 {
+    delay(300);
     *buton = 0;
     boolean tic_tac = 0; 
     int confirmare = 0;
