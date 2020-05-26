@@ -2,7 +2,7 @@
 
 void directie (byte directie, unsigned short viteza, byte pin[4])
 {
-    byte viteza_2 = 30;
+    byte viteza_2 = 60;
     if(viteza == 0)
     {
         viteza = 255;
@@ -34,7 +34,7 @@ void directie (byte directie, unsigned short viteza, byte pin[4])
         case 2:
         {
             // In fata la viteza
-            analogWrite(pin[0], viteza - 10);
+            analogWrite(pin[0], viteza - 20);
             digitalWrite(pin[1], LOW);
             analogWrite(pin[2], viteza );
             digitalWrite(pin[3], LOW);            
@@ -45,9 +45,9 @@ void directie (byte directie, unsigned short viteza, byte pin[4])
         {
             // In spate la viteza
             digitalWrite(pin[0], LOW);
-            digitalWrite(pin[1], viteza - 10);
+            analogWrite(pin[1], viteza - 20);
             digitalWrite(pin[2], LOW);
-            digitalWrite(pin[3], viteza);           
+            analogWrite(pin[3], viteza);           
         }
         break;
 
