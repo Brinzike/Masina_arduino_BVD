@@ -33,8 +33,10 @@ float temperatura;
 const byte PIN_TRIG = D6;
 const byte PIN_ECHO = D7;
 Servo servo;
-boolean tic_tac_send = 0;
 float masuratoare[7];// 3 = 90grade , 2 = 75 , 1 = 60 , 0 = 45, 4 = 105, 5 = 120, 6 = 135
+byte nr_masuratoare = 2;
+byte nr_masuratoare_precedenta = 4;
+boolean tic_tac_masuratoare = 0;
 byte timp_rotire_servo = 100;
 byte nivel_viteza = 155;
 boolean tic_tac_viteza = 0;
@@ -50,25 +52,31 @@ boolean tic_tac_secunde = 0;
 //----------Comunicare----------//
 const int16_t I2C_SLAVE = 0x08;
 byte last_cod = 0;
+boolean tic_tac_send = 0;
 
 //----------Variabile-----------//
 byte mod = 0;
+byte cod_primit = 0;
+boolean _start = 0;
 
 //========================================SETUP========================================//
 void setup() 
 {
-    lcd.begin();
-    Wire.begin();
+    lcd.begin(); 
     Serial.begin(115200);
     adauga_eveniment(" A pornit sistenuml :))  ");
     delay(500);
 
+    //----------Comunicare------------------------------//
+    Wire.begin();
+    adauga_eveniment(" A pornit I2C  ");
+    delay(500);
+
+    //----------SETUP pini------------------------------//
     pinMode(PIN_TRIG, OUTPUT);
     pinMode(PIN_ECHO, INPUT);
 
-    servo.attach(D2);
-    
-    // ---------------------- Connect WiFi------------------//
+    //---------------------- Connect WiFi------------------//
     WiFi.begin(ssid, password);
     adauga_eveniment(" Astept sa ma conectez...  ");
     while(secunde_curente < 20 && !WiFi_conectat)
@@ -96,9 +104,21 @@ void setup()
         adauga_eveniment(" Timp expirat");
     }
 
-    dht.begin();
-    Wire.begin();
-    adauga_eveniment(" A pornit I2C  ");
+    //----------------------Evitare Obstacole------------------//
+    dht.begin(); 
+    servo.attach(D2);
+
+    //----------------------Start------------------//
+    while( cod_primit != 1 )
+    {
+        ceas(&zeci_secunde, &secunde_curente, &tic_tac_secunde);
+        refresh_lcd();
+        trimite_slave(250);          
+    }
+    
+    cod_primit = 0;
+    _start = 1;
+    adauga_eveniment(" Start");
 }
 //========================================END SETUP========================================//
 //-----------------------------------------------------------------------------------------//
@@ -119,16 +139,11 @@ void cerere_slave()
     Wire.requestFrom(I2C_SLAVE, 1);    // request 1 bytes from slave device #8
     while (Wire.available()) 
     {
-        byte cod_primit = Wire.read(); // receive a byte as character
-
-        if( cod_primit > 0 && cod_primit < 200 )
+        cod_primit = Wire.read(); // receive a byte as character
+        if( _start ) // == 1
         {
             mesaje(cod_primit);
-            // Daca este 50 - 52 schimba modul
-            if(cod_primit >= 50 && cod_primit <= 52)
-            {
-                mod = cod_primit - 50;
-            }
+            cod_primit = 0;
         }
     }
 }
@@ -160,7 +175,10 @@ void mesaje(byte codul)
 {
     switch(codul)
         {
-            case 1:
+            case 0: // nimic
+            break;
+            
+            case 2:
             {
                 temp = " Partenerul este gata  ";
             }
@@ -379,8 +397,11 @@ void mesaje(byte codul)
             }
         }   
 
-        adauga_eveniment(temp);
-        temp = "0";
+        if( temp != "0" )
+        {
+            adauga_eveniment(temp);
+            temp = "0";
+        }
 }
 
 //------------------------------Verificare mod--------------------//
@@ -679,9 +700,58 @@ void printeaza_linie(String text, byte *pozitie)
 //------------------------------Evita Obstacolele--------------------//
 void evita_obstacolele()
 {
-    servo.write(90);
+    // Intra cu nr_masuratoare = 2 si nr_masuratoare_precedenta = 4
+    float dist = 0;
+
+    servo.write(75 + ( (nr_masuratoare - 2) * 15) ); // Invarte la 75 apoi la 90 apoi la 105
     delay(timp_rotire_servo);
-    float dist = masoara_distanta_cm();
+
+    masuratoare[nr_masuratoare] = masoara_distanta_cm(); // Masoara pt pozitia curenta
+
+    // Compara si ia cea mai mica valoare valida
+    if( masuratoare[nr_masuratoare] > 3.0 )
+    {
+        if( masuratoare[nr_masuratoare_precedenta] > 3.0 )
+        {
+            if( masuratoare[nr_masuratoare] < masuratoare[nr_masuratoare_precedenta] )
+            {
+                dist = masuratoare[nr_masuratoare];
+            }
+            else
+            {
+                dist = masuratoare[nr_masuratoare_precedenta];
+            }
+        }
+        else
+        {
+            dist = masuratoare[nr_masuratoare];
+        }     
+    }
+    else if( masuratoare[nr_masuratoare_precedenta] > 3.0 ) // daca masuratoarea precedenta este valida
+    {
+        dist = masuratoare[nr_masuratoare_precedenta];
+    }
+
+    nr_masuratoare_precedenta = nr_masuratoare;
+    
+    if( !tic_tac_masuratoare )
+    {        
+        nr_masuratoare++;
+    }
+    else
+    {
+        nr_masuratoare--;
+    }
+
+    if( nr_masuratoare == 4 )
+    {
+        tic_tac_masuratoare = 1;
+    }
+    else if( nr_masuratoare == 2 )
+    {
+        tic_tac_masuratoare = 0;
+    }    
+    
     if(dist > 30.0)
     {
         trimite_slave(202);

@@ -47,6 +47,7 @@ CRGB semnalizare[NUM_LEDS];
 byte mod = 0;
 const byte PIN_POWER_MOTOR = 4; 
 byte eroare_inaintare = 0;
+boolean tic_tac_eroare_inaintare = 0;
 
 //========================================SETUP========================================//
 void setup() 
@@ -70,6 +71,12 @@ void setup()
     
     Wire.onRequest(requestEvent);
     Wire.onReceive(receiveEvent);
+
+    while( cod_primit != 250 ) // Executa pana cand primeste sa continue
+    {      
+        delay(10); 
+    }    
+    update_cod(1); // A terminat initializarea
     
     semnalizare[3] = CRGB(0, 50, 0);
     FastLED.show();
@@ -95,7 +102,6 @@ void setup()
     
     //----------Start IR------------------------------//
     irrecv.enableIRIn();
-    update_cod(1); // A terminat initializarea
     semnalizare[5] = CRGB(0, 50, 0);
     FastLED.show();
     delay(400);
@@ -106,12 +112,13 @@ void setup()
     FastLED.show();
     delay(400);
 
+// TODO: De facut configurare senzori de linie
     //----------Start------------------------------//
+    update_cod(2); // A terminat initializarea
     digitalWrite(PIN_POWER_MOTOR, LOW);
     semnalizare[7] = CRGB(0, 50, 0);
     FastLED.show();
     delay(400);
-    Serial.println("A pornit");
 }
 
 void requestEvent() 
@@ -139,6 +146,7 @@ void requestEvent()
 void receiveEvent(int howMany) // nu stiu de ce este howMany
 {
     cod_primit = Wire.read();
+    Serial.println(cod_primit);
 }
 
 //========================================END SETUP========================================//
@@ -148,50 +156,74 @@ void loop()
 {
     ceas(&zeci_secunde, &secunde_curente, &tic_tac_secunde);
     
-    citeste_senzorii();
-    if(valori_senzori_ir[0] > 400 || valori_senzori_ir[1] > 400 || valori_senzori_ir[2] > 400 ) // Un senzor a iesit de pe masa
-    {
-        // Stop
-        mergi(0, 0, 0);
-        update_cod(99);
-        eroare_inaintare = 1;
-    }
-    else
-    {
-        eroare_inaintare = 0;
-    }
+    verifica_suprafata();
     verifica_mod();
      
     delay(20);
 }
 //========================================END MAIN========================================//
-//#########################################################################################//
+//########################################################################################//
 //========================================FUNCTII=========================================//
+//------------------------------Verifica Inaintare--------------------//
+void verifica_suprafata()
+{
+    citeste_senzorii();
+    if(valori_senzori_ir[0] > 400 || valori_senzori_ir[1] > 400 || valori_senzori_ir[2] > 400 ) // Un senzor a iesit de pe masa
+    {
+        update_cod(99);
+        eroare_inaintare = 1;
+        // Il trimite putin in spate
+        if( !tic_tac_eroare_inaintare ) // == 0
+        {
+            tic_tac_eroare_inaintare = 1;
+            mergi(122, 3, 255 );
+            delay(75);
+        }
+    }
+    else
+    {
+        tic_tac_eroare_inaintare = 0;
+        eroare_inaintare = 0;
+    }
+}
+
 //------------------------------Comunicare--------------------//
 void update_cod(byte codul)
 {
-    // executa pana cand se elibereaza ultima pozitie
-    while( cod[99] != 0 )
-    {        
-    }
-    
-    for( byte i = 0; i < 99; i++ )
+    if(codul != last_cod )
     {
-        if(cod[i] == 0 )
+        last_cod = codul;
+        
+        // daca este ocupata ultima pozitie executa pana cand se elibereaza 
+        while( cod[99] != 0 )
+        {        
+        }
+        
+        for( byte i = 0; i < 99; i++ )
         {
-            cod[i] = codul;
-            break;
+            if(cod[i] == 0 )
+            {
+                cod[i] = codul;
+                break;
+            }
         }
     }
 }
 
 void mergi(byte cod, byte orientare, unsigned short viteza )
-{    
-    if(last_cod != cod && mod == 0)
+{   
+    if( eroare_inaintare == 0 )
     {
-        last_cod = cod;
         update_cod(cod);
     }
+    else
+    {
+        if( orientare != 3 ) // Nu ii lasa sa mearga decat inapoi si stop
+        {
+            orientare = 0;
+        }
+    }
+    
     switch(orientare)
     {
         case 0:// Repaus
@@ -653,13 +685,13 @@ void evita_obstacolele()
 
         case 202: // Inainte Full
         {
-            mergi(121, 2, 255);
+            mergi(121, 2, 255);  
         }
         break;
 
         case 203: // Inapoi usor
         {
-            mergi(122, 3, 150);
+            mergi(122, 3, 180);
         }
         break;
 

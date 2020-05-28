@@ -1,7 +1,8 @@
 //   0 - nu face nimic
 
 //--------------------Coduri de la Slave la master--------------------//
-//   1 - " Partenerul este gata  "
+//   1 - Am pornit
+//   2 - " Partenerul este gata  "
 
 //  50 - " Telecomanda"
 //  51 - " Urmareste Linia"
@@ -60,3 +61,5 @@
 // 220 - Schimba modul telecomanda
 // 221 - Schimba modul urmaritor linie
 // 222 - Schimba modul evitare obstacole
+
+// 250 - Porneste
