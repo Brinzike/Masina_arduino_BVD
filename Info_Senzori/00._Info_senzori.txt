@@ -1,11 +1,28 @@
 01. Senzori pentru detectare linie neagra IR
 	- TCRT5000
-	- Rezistenta de 100 Ohm pentru LED IR
-	- Rezistenta de 10 KOhm pentru PULLDOWN Receptor IR
 	
-02. Senzor ultrasune HC-SR04
-
-03. Modul DHT11
-
-04. Receptor Infra Rosu
+02. Receptor Infra Rosu
 	- VS 1838B
+
+03. Motor Driver cu 2 canale
+	- L9110
+
+04. Senzor ultrasune 
+	- HC-SR04
+
+05. Servo Motor Tower Pro 
+	- MG90S
+
+06. Releu 
+
+07. Modul Senzor Temperatura si umiditate 
+	- DHT11
+
+08. LCD 20x4
+	- lcd020n004l
+
+09. Modul I2C pentru LCD 16x2 si 20x4
+	- I2C 1602
+
+10. Mudul 8 LED-uri 
+	- WS2812

@@ -8,6 +8,7 @@
 //  51 - " Urmareste Linia"
 //  52 - " Evita obstacol"
 
+//  98 - " Am un obstacol"
 //  99 - " Nu detectez suprafata  "
 
 // 101 - " Butoane neconfigurate  "
@@ -40,6 +41,13 @@
 // 125 - " Stanga"
 // 126 - " Dreapta"
 
+// 130 - " Aseaza-ma pe suprafata fara linie"
+// -=- - " Si apasa OK"
+// 131 - " S Stanga pe linie"
+// 132 - " S Mijloc pe linie"
+// 133 - " S Dreapta pe linie"
+// 134 - " Aseaza-ma pe margine masa"
+
 // 150 - " Tasta utilizata"
 // -=- - " Incearca alta tasta  "
 // 151 - " A intervenit o eroare  "
@@ -63,3 +71,5 @@
 // 222 - Schimba modul evitare obstacole
 
 // 250 - Porneste
+// 251 - Nu detectez suprafata
+// 252 - Obstacol in fata

@@ -6,7 +6,6 @@
 #include <Servo.h>
 
 //----------INCLUDE C----------//
-#include "coduri_S-M_BVD.c"
 #include "ceas_BVD.c"
 
 //----------WIFI----------//
@@ -58,6 +57,7 @@ boolean tic_tac_send = 0;
 byte mod = 0;
 byte cod_primit = 0;
 boolean _start = 0;
+byte eroare_inaintare = 0;
 
 //========================================SETUP========================================//
 void setup() 
@@ -128,11 +128,56 @@ void loop()
     temperatura = dht.readTemperature();
     ceas(&zeci_secunde, &secunde_curente, &tic_tac_secunde);
     refresh_lcd(); 
+
+//    verifica_obstacole();
     verifica_mod(); 
+
+    delay(50);
 }
 //========================================END MAIN========================================//
 //----------------------------------------------------------------------------------------//
 //========================================FUNCTII=========================================//
+//------------------------------Verificare inaintare----------------------------------//
+void verifica_obstacole()
+{
+    switch(eroare_inaintare)
+    {
+        case 0: // Nu are nici un obstacol 
+        {
+            servo.write(90);
+            delay(timp_rotire_servo);
+
+            masuratoare[3] = masoara_distanta_cm();
+            if( masuratoare[3] > 3.0 && masuratoare[3] < 20.0 ) // Are un obstacol
+            {
+                eroare_inaintare = 2;
+                trimite_slave(252);
+            }
+            else
+            {
+                eroare_inaintare = 0;
+                trimite_slave(250);
+            }
+        }
+        break;
+
+        case 1:
+        {
+            
+        }
+        break;
+
+        case 2:
+        {
+            if( mod == 2 )
+            {
+                trimite_slave(250); 
+            }   
+        }
+        break;
+    }
+}
+
 //------------------------------Comunicare----------------------------------//
 void cerere_slave()
 {    
@@ -205,6 +250,12 @@ void mesaje(byte codul)
             }
             break;
 
+            case 98:
+            {
+                temp = " Am un obstacol";
+            }
+            break;
+            
             case 99:
             {
                 temp = " Nu detectez suprafata  ";
@@ -330,43 +381,76 @@ void mesaje(byte codul)
 
             case 120:
             {
-                temp = " Stop";
+                //temp = " Stop";
             }
             break;
             
             case 121:
             {
-                temp = " Inainte";
+                //temp = " Inainte";
             }
             break;
 
             case 122:
             {
-                temp = " Inapoi";
+                //temp = " Inapoi";
             }
             break;
 
             case 123:
             {
-                temp = " Usor Stanga";
+                //temp = " Usor Stanga";
             }
             break;
 
             case 124:
             {
-                temp = " Usor Dreapta";
+                //temp = " Usor Dreapta";
             }
             break;
 
             case 125:
             {
-                temp = " Stanga";
+                //temp = " Stanga";
             }
             break;
 
             case 126:
             {
-                temp = " Dreapta";
+                //temp = " Dreapta";
+            }
+            break;
+
+            case 130:
+            {
+                temp = " Aseaza-ma pe suprafata fara linie";
+                adauga_eveniment(temp);
+                temp = "0";
+                temp = " Si apasa OK";
+            }
+            break;
+
+            case 131:
+            {
+                temp = " S Stanga pe linie";
+            }
+            break;
+
+            case 132:
+            {
+                temp = " S Mijloc pe linie";
+            }
+            break;
+
+            case 133:
+            {
+                temp = " S Dreapta pe linie";
+            }
+            break;
+
+            case 134:
+            {
+                temp = " Aseaza-ma pe margine masa";
             }
             break;
             
@@ -410,7 +494,7 @@ void verifica_mod()
     // Pentru mod 0 si 1 nu are nici o actiune, doar afiseaza mesajele
     if(mod == 2)
     {
-        evita_obstacolele();
+        evita_obstacole();
     }
 }
 
@@ -420,8 +504,6 @@ float masoara_distanta_cm()
     // Precizie masurata +- 0.50 cm 
     float distanta[3] = {0.0, 0.0, 0.0};
     long durata;
-    float eroare_calcul = 1; //1.24; // Am o eroare de calcul de aprox de 1.24 ori mai putin
-    float eroare_pozitionare = 0.0; // Distanta de la botul masinutei la senzor
 
     for(byte i = 0; i < 3; i++) // pana cand face ce-a de-a treia masuratoare
     {
@@ -439,7 +521,6 @@ float masoara_distanta_cm()
         
         // speedofsound = 331.5+(0.607*temperature);
         // distance = duration*speedofsound/10000/2;
-        // distanta reala = (distance * eroare_calcul) - eroare pozitionare
         if( temperatura != 0.0 )
         {
             distanta[i] = durata * (331.5 + (0.607 * temperatura) )/ 20000;
@@ -698,6 +779,56 @@ void printeaza_linie(String text, byte *pozitie)
 }
 
 //------------------------------Evita Obstacolele--------------------//
+void evita_obstacole()
+{
+    servo.write(90);
+    delay(timp_rotire_servo);
+    float distanta = masoara_distanta_cm();
+
+    if( distanta >= 30.0 ) // Inainte full
+    {
+        trimite_slave(202);
+    }
+    else if( distanta >= 20.0 && distanta < 30.0 ) // Ininte incet
+    {
+        trimite_slave(201);
+    }
+    else if( distanta >= 6.0 && distanta < 20.0 ) // Stop faci masuratori
+    {
+        trimite_slave(200);
+        servo.write(60);
+        delay(timp_rotire_servo);
+        masuratoare[1] = masoara_distanta_cm();
+
+        servo.write(120);
+        delay(timp_rotire_servo);
+        masuratoare[5] = masoara_distanta_cm();
+
+        if( masuratoare[1] < masuratoare[5] ) // In stanga are mai mult loc
+        {
+            // Rotire Stanga
+            trimite_slave(207);
+            delay(50);
+        }
+        else
+        {
+            // Rotire Dreapta
+            trimite_slave(208);
+            delay(50);
+        }
+
+    }
+    else if( distanta >= 3.0 && distanta < 6.0 ) // Inapoi
+    {
+        trimite_slave(203);
+    }
+    else // Stop
+    {
+        trimite_slave(200);
+    }
+    
+}
+
 void evita_obstacolele()
 {
     // Intra cu nr_masuratoare = 2 si nr_masuratoare_precedenta = 4
@@ -709,31 +840,17 @@ void evita_obstacolele()
     masuratoare[nr_masuratoare] = masoara_distanta_cm(); // Masoara pt pozitia curenta
 
     // Compara si ia cea mai mica valoare valida
-    if( masuratoare[nr_masuratoare] > 3.0 )
+    byte termen_final = compara(nr_masuratoare, nr_masuratoare_precedenta);
+    if( !termen_final ) // ==0
     {
-        if( masuratoare[nr_masuratoare_precedenta] > 3.0 )
-        {
-            if( masuratoare[nr_masuratoare] < masuratoare[nr_masuratoare_precedenta] )
-            {
-                dist = masuratoare[nr_masuratoare];
-            }
-            else
-            {
-                dist = masuratoare[nr_masuratoare_precedenta];
-            }
-        }
-        else
-        {
-            dist = masuratoare[nr_masuratoare];
-        }     
+        dist = 0;
     }
-    else if( masuratoare[nr_masuratoare_precedenta] > 3.0 ) // daca masuratoarea precedenta este valida
+    else
     {
-        dist = masuratoare[nr_masuratoare_precedenta];
+        dist = masuratoare[termen_final];
     }
 
-    nr_masuratoare_precedenta = nr_masuratoare;
-    
+    nr_masuratoare_precedenta = nr_masuratoare; 
     if( !tic_tac_masuratoare )
     {        
         nr_masuratoare++;
@@ -752,23 +869,65 @@ void evita_obstacolele()
         tic_tac_masuratoare = 0;
     }    
     
-    if(dist > 30.0)
+    if(dist > 30.0) // Full inainte
     {
         trimite_slave(202);
     }
-    else if(dist <= 30.0 && dist > 20.0)
+    else if(dist <= 30.0 && dist > 20.0) // incet inainte
     {
         trimite_slave(201);
     }
-    else if( dist <= 10.0 && dist >= 3.0 )
+    else if( dist <= 20.0 && dist > 10 ) // fa masuratorile si decide in ce directie sa iei
+    {
+        //fa_masuratorile();
+        // 45Grade si 135 grade
+        servo.write(45);
+        delay( 2 * timp_rotire_servo );
+        masuratoare[0] = masoara_distanta_cm();
+
+        servo.write(135);
+        delay( 2 * timp_rotire_servo );
+        masuratoare[6] = masoara_distanta_cm();
+
+        byte termen_mai_mic = compara(0,6);
+    }
+    else if( dist <= 10.0 && dist >= 3.0 ) // da in spate
     {
         trimite_slave(203);
     }
-    else
+    else // Stop
     {
         trimite_slave(200);
     }
 
+}
+
+byte compara(byte nr_termen1, byte nr_termen2)
+{
+    if( masuratoare[nr_termen1] > 3.0 )
+    {
+        if( masuratoare[nr_termen2] > 3.0 )
+        {
+            if( masuratoare[nr_termen1] < masuratoare[nr_termen2] )
+            {
+                return nr_termen1;
+            }
+            else
+            {
+                return nr_termen2;
+            }
+        }
+        else
+        {
+            return nr_termen1;
+        }     
+    }
+    else if( masuratoare[nr_termen2] > 3.0 ) // daca masuratoarea precedenta este valida
+    {
+        return nr_termen2;
+    }
+    
+    return 0;
 }
 
 //------------------------------Convertiri--------------------------------//

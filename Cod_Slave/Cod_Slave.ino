@@ -1,8 +1,8 @@
 //----------LIBRARII----------//
 #include <IRremote.h>
 #include <Wire.h>
-//#include <EEPROM.h>
 #include <FastLED.h>
+//#include <EEPROM.h>
 
 //-----------INCLUDE C----------//
 #include "control_motoare_BVD.c"
@@ -35,7 +35,8 @@ byte last_cod = 0;
 //-----Urmaritor linie-------//
 const byte PIN_SENZOR_IR[] = {A0, A1, A2}; // 0 = Stanga , 1 = Mijloc, 2 = Dreapta
 unsigned short valori_senzori_ir[3];
-byte valoare_detectare_linie = 100;
+unsigned short valoare_detectare_linie = 80;
+unsigned short valoare_fara_suprafata ;
 byte cazul_precedent = 0;
 
 //-----FastLED------------//
@@ -112,7 +113,9 @@ void setup()
     FastLED.show();
     delay(400);
 
-// TODO: De facut configurare senzori de linie
+    //----------Conf senzori------------------------------//
+    configureaza_senzori();
+
     //----------Start------------------------------//
     update_cod(2); // A terminat initializarea
     digitalWrite(PIN_POWER_MOTOR, LOW);
@@ -146,6 +149,27 @@ void requestEvent()
 void receiveEvent(int howMany) // nu stiu de ce este howMany
 {
     cod_primit = Wire.read();
+    switch(cod_primit)
+    {
+        case 250:
+        {
+            eroare_inaintare = 0;
+        }
+        break;
+
+        case 251:
+        {
+            eroare_inaintare = 1;
+        }
+        break;
+        
+        case 252:
+        {
+            eroare_inaintare = 2;
+            update_cod(98);
+        }
+        break;
+    }
     Serial.println(cod_primit);
 }
 
@@ -155,8 +179,12 @@ void receiveEvent(int howMany) // nu stiu de ce este howMany
 void loop() 
 {
     ceas(&zeci_secunde, &secunde_curente, &tic_tac_secunde);
+
+    if( eroare_inaintare != 2 )
+    {
+        verifica_suprafata();
+    }
     
-    verifica_suprafata();
     verifica_mod();
      
     delay(20);
@@ -164,11 +192,91 @@ void loop()
 //========================================END MAIN========================================//
 //########################################################################################//
 //========================================FUNCTII=========================================//
+//------------------------------Configurare senzori--------------------//
+void configureaza_senzori()
+{
+    boolean flag = 0;
+    unsigned short val_suprafata = 0;
+    unsigned short val_linie[3];
+    update_cod(130); // Fara linie
+    while( !flag )
+    {
+        citeste_senzorii();
+        if( receptie() == control[0] )
+        {
+            val_suprafata = ( ( valori_senzori_ir[0] + valori_senzori_ir[1] + valori_senzori_ir[2] ) / 3 );
+            Serial.println(val_suprafata);
+            flag = 1;
+        }
+        delay(300);
+    }
+    flag = 0;
+
+    update_cod(131); // Senzor stanga
+    while( !flag )
+    {
+        citeste_senzorii();
+        if( receptie() == control[0] )
+        {
+            val_linie[0] = valori_senzori_ir[0];
+            flag = 1;
+            Serial.println(val_linie[0]);
+        }
+        delay(300);
+    }
+    flag = 0;
+
+    update_cod(132); // Senzor mijloc
+    while( !flag )
+    {
+        citeste_senzorii();
+        if( receptie() == control[0] )
+        {
+            val_linie[1] = valori_senzori_ir[1];
+            flag = 1;
+            Serial.println(val_linie[1]);
+        }
+        delay(300);
+    }
+    flag = 0;
+
+    update_cod(133); // Senzor dreapta
+    while( !flag )
+    {
+        citeste_senzorii();
+        if( receptie() == control[0] )
+        {
+            val_linie[2] = valori_senzori_ir[2];
+            flag = 1;
+            Serial.println(val_linie[2]);
+        }
+        delay(300);
+    }
+    flag = 0;
+
+    // ( Medie valori + val_suprafata ) / 2
+    valoare_detectare_linie = ( ( ( (val_linie[0] + val_linie[1] + val_linie[2]) / 3 ) + val_suprafata ) / 2 );
+
+    update_cod(134); // Fara suprafata
+    while( !flag )
+    {
+        citeste_senzorii();
+        if( receptie() == control[0] )
+        {
+            valoare_fara_suprafata = ( ( valori_senzori_ir[0] + valori_senzori_ir[1] + valori_senzori_ir[2] ) / 3 - 20 );
+            flag = 1;
+            Serial.println(valoare_fara_suprafata);
+        }
+        delay(300);
+    }
+    flag = 0;
+}
+
 //------------------------------Verifica Inaintare--------------------//
 void verifica_suprafata()
 {
     citeste_senzorii();
-    if(valori_senzori_ir[0] > 400 || valori_senzori_ir[1] > 400 || valori_senzori_ir[2] > 400 ) // Un senzor a iesit de pe masa
+    if(valori_senzori_ir[0] > valoare_fara_suprafata || valori_senzori_ir[1] > valoare_fara_suprafata || valori_senzori_ir[2] > valoare_fara_suprafata ) // Un senzor a iesit de pe masa
     {
         update_cod(99);
         eroare_inaintare = 1;
@@ -588,12 +696,12 @@ void control_telecomanda(int comanda)
         {
             if( eroare_inaintare == 0 )
             {
-                mergi(121, 2, 200);
+                mergi(121, 2, 210);
             }
         }
         else if( comanda == control[3] ) // Inapoi
         {
-            mergi(122, 3, 170);
+            mergi(122, 3, 200);
         }
         else if( comanda == control[4] ) // Vireaza Stanga
         {
@@ -618,6 +726,7 @@ void control_telecomanda(int comanda)
 //------------------------------Urmaritor linie--------------------//
 void urmareste_linia()
 {
+    citeste_senzorii();
     if( valori_senzori_ir[0] > valoare_detectare_linie && valori_senzori_ir[1] < valoare_detectare_linie && valori_senzori_ir[2] < valoare_detectare_linie ) // Este pe stanga
     {
         mergi(0, 6, 160);
